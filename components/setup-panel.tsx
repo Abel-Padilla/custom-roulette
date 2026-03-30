@@ -84,7 +84,7 @@ export function SetupPanel({ items, onItemsChange, onStartGame }: SetupPanelProp
         {/* Add new item */}
         <div className="flex gap-2">
           <Input
-            placeholder="Enter prize name..."
+            placeholder="Enter item name..."
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addItem()}
