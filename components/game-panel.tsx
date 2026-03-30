@@ -22,6 +22,7 @@ interface GamePanelProps {
   onScoreUpdate: (score: number) => void
   onGameEnd: () => void
   onPlayAgain: () => void
+  initialAttempts?: number
 }
 
 type GameState = "selecting" | "spinning" | "result"
@@ -33,12 +34,14 @@ export function GamePanel({
   onScoreUpdate,
   onGameEnd,
   onPlayAgain,
+  initialAttempts = 3,
 }: GamePanelProps) {
   const [gameState, setGameState] = useState<GameState>("selecting")
   const [selectedItem, setSelectedItem] = useState<RouletteItem | null>(null)
   const [resultItem, setResultItem] = useState<RouletteItem | null>(null)
   const [targetIndex, setTargetIndex] = useState<number | null>(null)
   const [isWin, setIsWin] = useState<boolean | null>(null)
+  const [attemptsRemaining, setAttemptsRemaining] = useState(initialAttempts)
   const { fireWin } = useConfetti()
 
   const handleSelectItem = (item: RouletteItem) => {
@@ -67,8 +70,16 @@ export function GamePanel({
     if (isWin) {
       fireWin()
       onScoreUpdate(currentScore + 1)
+      // Add extra attempt on win
+      setAttemptsRemaining(attemptsRemaining + 1)
     } else {
-      onGameEnd()
+      // Decrease attempts on loss
+      const remainingAfterLoss = attemptsRemaining - 1
+      setAttemptsRemaining(remainingAfterLoss)
+      // End game if no attempts left
+      if (remainingAfterLoss === 0) {
+        setTimeout(() => onGameEnd(), 1500)
+      }
     }
   }
 
@@ -93,6 +104,16 @@ export function GamePanel({
           <Sparkles className="w-5 h-5 text-accent" />
           <span className="text-xl font-bold text-primary">{currentScore}</span>
           <span className="text-muted-foreground">wins</span>
+        </div>
+        <div className="h-6 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <Target className="w-5 h-5 text-orange-500" />
+          <span className="text-lg font-bold" style={{
+            color: attemptsRemaining <= 1 ? '#ef4444' : '#f97316'
+          }}>
+            {attemptsRemaining}
+          </span>
+          <span className="text-muted-foreground">attempts</span>
         </div>
       </div>
 
@@ -216,13 +237,35 @@ export function GamePanel({
                 </div>
 
                 {isWin ? (
-                  <Button
-                    onClick={handleContinue}
-                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold"
-                    size="lg"
-                  >
-                    Continue & Spin Again!
-                  </Button>
+                  <div className="space-y-3">
+                    <motion.div
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      className="p-3 rounded-lg bg-accent/20 border border-accent"
+                    >
+                      <p className="text-sm font-semibold text-accent">+1 Extra Attempt!</p>
+                    </motion.div>
+                    <Button
+                      onClick={handleContinue}
+                      className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold"
+                      size="lg"
+                    >
+                      Continue & Spin Again!
+                    </Button>
+                  </div>
+                ) : attemptsRemaining > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-lg">
+                      Attempts Left: <span className="text-primary font-bold text-2xl">{attemptsRemaining}</span>
+                    </p>
+                    <Button
+                      onClick={handleContinue}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+                      size="lg"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-lg">
