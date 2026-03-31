@@ -49,29 +49,20 @@ export function SetupPanel({ items, onItemsChange, onStartGame }: SetupPanelProp
     onItemsChange(items.filter((item) => item.id !== id))
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, itemId: string) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, itemId: string) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const formData = new FormData()
-    formData.append('file', file)
-
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await response.json()
-      if (data.success) {
-        onItemsChange(
-          items.map((item) =>
-            item.id === itemId ? { ...item, image: data.url } : item
-          )
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      onItemsChange(
+        items.map((item) =>
+          item.id === itemId ? { ...item, image: dataUrl } : item
         )
-      }
-    } catch (error) {
-      console.error('Upload failed', error)
+      )
     }
+    reader.readAsDataURL(file)
   }
 
   const triggerImageUpload = (itemId: string) => {
@@ -110,9 +101,9 @@ export function SetupPanel({ items, onItemsChange, onStartGame }: SetupPanelProp
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={async (e) => {
+          onChange={(e) => {
             if (selectedItemId) {
-              await handleImageUpload(e, selectedItemId)
+              handleImageUpload(e, selectedItemId)
             }
           }}
         />
