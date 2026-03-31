@@ -121,7 +121,7 @@ export default function CasinoRoulette() {
   }
 
   return (
-    <main className="min-h-screen bg-background overflow-hidden relative">
+    <main className="h-dvh bg-background overflow-hidden relative flex flex-col">
       {/* Ambient background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-32 w-64 h-64 bg-primary/20 rounded-full blur-3xl" />
@@ -129,20 +129,20 @@ export default function CasinoRoulette() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8">
+      <div className="relative z-10 container mx-auto px-4 py-2 md:py-4 flex flex-col h-full min-h-0">
         {/* Header */}
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-1 md:mb-3 shrink-0"
         >
           <SparklesText
-            className="text-4xl md:text-6xl mb-2"
+            className="text-2xl md:text-4xl lg:text-5xl mb-0.5"
             colors={{ first: "#FFD700", second: "#FFA500" }}
           >
             Lucky Roulette
           </SparklesText>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-xs md:text-base">
             Predict the winning item and keep your streak alive!
           </p>
         </motion.header>
@@ -154,7 +154,7 @@ export default function CasinoRoulette() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="mb-6"
+              className="mb-1 md:mb-2 shrink-0"
             >
               <Button
                 variant="ghost"
@@ -169,7 +169,7 @@ export default function CasinoRoulette() {
         </AnimatePresence>
 
         {/* Main content */}
-        <div className="grid lg:grid-cols-[1fr_340px] gap-8">
+        <div className="grid lg:grid-cols-[1fr_340px] gap-4 md:gap-6 flex-1 min-h-0 overflow-auto lg:overflow-hidden">
           <AnimatePresence mode="wait">
             {phase === "setup" && (
               <motion.div

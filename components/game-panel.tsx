@@ -23,6 +23,7 @@ interface GamePanelProps {
   onGameEnd: () => void
   onPlayAgain: () => void
   initialAttempts?: number
+  maxAttempts?: number
 }
 
 type GameState = "selecting" | "spinning" | "result"
@@ -35,6 +36,7 @@ export function GamePanel({
   onGameEnd,
   onPlayAgain,
   initialAttempts = 3,
+  maxAttempts = 4,
 }: GamePanelProps) {
   const [gameState, setGameState] = useState<GameState>("selecting")
   const [selectedItem, setSelectedItem] = useState<RouletteItem | null>(null)
@@ -51,27 +53,34 @@ export function GamePanel({
 
   const handleSpin = () => {
     if (!selectedItem || gameState !== "selecting") return
-    
-    // Random result
+
+    // Generate random target index for the wheel animation
     const randomIndex = Math.floor(Math.random() * items.length)
-    const result = items[randomIndex]
-    
-    console.log("[v0] Spinning - Target index:", randomIndex, "Result item:", result.name, "Selected:", selectedItem.name)
-    
+
+    console.log("[v0] Spinning - Target index:", randomIndex, "Selected:", selectedItem.name)
+
     setTargetIndex(randomIndex)
     setGameState("spinning")
-    setResultItem(result)
-    setIsWin(result.id === selectedItem.id)
+    // Don't set resultItem or isWin here - wait for spin to complete
   }
 
-  const handleSpinComplete = () => {
+  const handleSpinComplete = (winnerIndex: number) => {
+    // winnerIndex is derived from the actual visual position of the wheel,
+    // guaranteeing the result is always in sync with what the pointer shows
+    const result = items[winnerIndex]
+    const win = result.id === selectedItem?.id
+
+    setResultItem(result)
+    setIsWin(win)
     setGameState("result")
-    
-    if (isWin) {
+
+    if (win) {
       fireWin()
       onScoreUpdate(currentScore + 1)
       // Add extra attempt on win
-      setAttemptsRemaining(attemptsRemaining + 1)
+      if (attemptsRemaining < maxAttempts) {
+        setAttemptsRemaining(attemptsRemaining + 1)
+      } 
     } else {
       // Decrease attempts on loss
       const remainingAfterLoss = attemptsRemaining - 1
@@ -92,41 +101,45 @@ export function GamePanel({
   }
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      {/* Player info */}
-      <div className="flex items-center gap-4 p-4 rounded-xl bg-card/80 backdrop-blur border border-primary/20">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-primary" />
-          <span className="font-bold text-lg">{playerName}</span>
-        </div>
-        <div className="h-6 w-px bg-border" />
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-accent" />
-          <span className="text-xl font-bold text-primary">{currentScore}</span>
-          <span className="text-muted-foreground">wins</span>
-        </div>
-        <div className="h-6 w-px bg-border" />
-        <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-orange-500" />
-          <span className="text-lg font-bold" style={{
-            color: attemptsRemaining <= 1 ? '#ef4444' : '#f97316'
-          }}>
-            {attemptsRemaining}
-          </span>
-          <span className="text-muted-foreground">attempts</span>
-        </div>
+    <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-8 w-full">
+      {/* Left: Wheel */}
+      <div className="flex items-center justify-center shrink-0">
+        <RouletteWheel
+          items={items}
+          spinning={gameState === "spinning"}
+          targetIndex={targetIndex}
+          onSpinComplete={handleSpinComplete}
+        />
       </div>
 
-      {/* Roulette wheel */}
-      <RouletteWheel
-        items={items}
-        spinning={gameState === "spinning"}
-        targetIndex={targetIndex}
-        onSpinComplete={handleSpinComplete}
-      />
+      {/* Right: Player info + Controls */}
+      <div className="flex flex-col items-center md:items-stretch gap-4 flex-1 min-w-0 max-w-md mx-auto md:mx-0">
+        {/* Player info */}
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-card/80 backdrop-blur border border-primary/20 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            <span className="font-bold text-lg">{playerName}</span>
+          </div>
+          <div className="h-6 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-accent" />
+            <span className="text-xl font-bold text-primary">{currentScore}</span>
+            <span className="text-muted-foreground">wins</span>
+          </div>
+          <div className="h-6 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-orange-500" />
+            <span className="text-lg font-bold" style={{
+              color: attemptsRemaining <= 1 ? '#ef4444' : '#f97316'
+            }}>
+              {attemptsRemaining}
+            </span>
+            <span className="text-muted-foreground">attempts</span>
+          </div>
+        </div>
 
-      {/* Selection area */}
-      <AnimatePresence mode="wait">
+        {/* Selection area */}
+        <AnimatePresence mode="wait">
         {gameState === "selecting" && (
           <motion.div
             key="selecting"
@@ -287,6 +300,7 @@ export function GamePanel({
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   )
 }

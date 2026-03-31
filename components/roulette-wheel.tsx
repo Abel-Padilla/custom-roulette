@@ -14,7 +14,7 @@ interface RouletteWheelProps {
   items: RouletteItem[]
   spinning: boolean
   targetIndex: number | null
-  onSpinComplete: () => void
+  onSpinComplete: (winnerIndex: number) => void
 }
 
 const WHEEL_COLORS = [
@@ -26,6 +26,7 @@ const WHEEL_COLORS = [
 export function RouletteWheel({ items, spinning, targetIndex, onSpinComplete }: RouletteWheelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rotation, setRotation] = useState(0)
+  const rotationRef = useRef(0)
   const segmentAngle = 360 / items.length
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, HTMLImageElement>>({})
 
@@ -131,32 +132,24 @@ export function RouletteWheel({ items, spinning, targetIndex, onSpinComplete }: 
   // Handle spin animation
   useEffect(() => {
     if (spinning && targetIndex !== null) {
-      // The wheel segments start at 0 degrees (3 o'clock position)
-      // The pointer is at the top (-90 degrees / 270 degrees from 0)
-      // We need to rotate the wheel so the target segment aligns with the pointer at top
-      
-      const extraSpins = 5 + Math.random() * 3
-      // Calculate where the center of the target segment is
-      const segmentCenterAngle = targetIndex * segmentAngle + segmentAngle / 2
-      // We need to rotate so that segment ends up at 270 degrees (top of wheel)
-      // Since the wheel rotates clockwise with positive values, we calculate:
-      // targetRotation = 270 - segmentCenterAngle (to bring segment to top)
-      // But we need to add full rotations and normalize
-      const targetAngle = 270 - segmentCenterAngle
-      const normalizedTarget = ((targetAngle % 360) + 360) % 360
-      const currentNormalized = rotation % 360
-      
-      // Calculate the rotation needed to reach target, plus extra spins
-      let rotationNeeded = normalizedTarget - currentNormalized
-      if (rotationNeeded <= 0) rotationNeeded += 360
-      
-      const newRotation = rotation + extraSpins * 360 + rotationNeeded
-      
-      console.log("[v0] Target index:", targetIndex, "Segment angle:", segmentCenterAngle, "New rotation:", newRotation)
-      
+      // Must be integer so extraFullSpins * 360 is an exact multiple of 360
+      // A float (e.g. 5.7 * 360 = 2052, 2052 % 360 = 252) would corrupt the landing angle
+      const extraFullSpins = Math.floor(5 + Math.random() * 3)
+
+      // Segment center angle in canvas coords (0 = right, clockwise)
+      const targetSegmentCenter = targetIndex * segmentAngle + segmentAngle / 2
+
+      // Account for current wheel position so the right segment lands at the pointer (top = 270°)
+      const currentPos = rotationRef.current % 360
+      let rotationNeeded = ((270 - targetSegmentCenter - currentPos) % 360 + 360) % 360
+      // Ensure the wheel always spins forward at least one full rotation
+      if (rotationNeeded === 0) rotationNeeded = 360
+
+      const newRotation = rotationRef.current + extraFullSpins * 360 + rotationNeeded
+      rotationRef.current = newRotation
       setRotation(newRotation)
     }
-  }, [spinning, targetIndex])
+  }, [spinning, targetIndex, segmentAngle])
 
   return (
     <div className="relative">
@@ -174,7 +167,11 @@ export function RouletteWheel({ items, spinning, targetIndex, onSpinComplete }: 
         }}
         onAnimationComplete={() => {
           if (spinning) {
-            onSpinComplete()
+            // Derive winner from the actual final rotation position (source of truth)
+            // so the result is always in sync with what's visually at the pointer
+            const canvasAngleAtPointer = ((270 - rotationRef.current) % 360 + 360) % 360
+            const winnerIndex = Math.floor(canvasAngleAtPointer / segmentAngle) % items.length
+            onSpinComplete(winnerIndex)
           }
         }}
         className="relative"
